@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import json
 import pytz
+import random
 
 # === CONFIG ===
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -17,8 +18,36 @@ CONFIG_DIR = SCRIPT_DIR / "config"
 DB_DIR = SCRIPT_DIR / "dbs"
 ADDRESS_FILE = CONFIG_DIR / "addresses.txt"
 WEBHOOK_FILE = CONFIG_DIR / "webhook.txt"
+PROXY_CONFIG_FILE = CONFIG_DIR / "proxy_config.json"
 DB_PATH = DB_DIR / "building_monitor.db"
 LOG_FILE = DB_DIR / "building_monitor.log"
+
+# Proxy configuration
+def load_proxy_config():
+    """Load proxy configuration from file."""
+    if PROXY_CONFIG_FILE.exists():
+        with PROXY_CONFIG_FILE.open('r') as f:
+            return json.load(f)
+    return {"use_proxy": True}  # Default to using proxy
+
+def save_proxy_config(config):
+    """Save proxy configuration to file."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with PROXY_CONFIG_FILE.open('w') as f:
+        json.dump(config, f)
+
+def get_random_proxy():
+    """Get a random proxy based on configuration."""
+    config = load_proxy_config()
+    if not config.get("use_proxy", True):
+        logging.info("Proxy usage is disabled")
+        return {}
+    
+    proxy = "http://customer-kappy_nrNdL-cc-US:3tGCOHQaFsfv1pzlrDAm+@pr.oxylabs.io:7777"
+    return {
+        "http": proxy,
+        "https": proxy
+    }
 
 # Schedule times (24-hour format)
 SCHEDULE_TIMES = [8, 12, 20]  # 8am, 12pm, 8pm
@@ -120,20 +149,47 @@ def get_bis_summary(house_no, street, boro="3"):
         "houseno": house_no,
         "street": street.replace(" ", "+")
     }
-    response = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
-    soup = BeautifulSoup(response.text, "html.parser")
-    text = soup.get_text(separator="\n")
-    def extract_count(label):
-        match = re.search(rf"{label}\s+(\d+)", text)
-        return int(match.group(1)) if match else None
-    data = {
-        "Complaints": extract_count("Complaints"),
-        "Violations-DOB": extract_count("Violations-DOB"),
-        "Violations-OATH/ECB": extract_count("Violations-OATH/ECB"),
+    
+    # Get a random proxy for this request
+    proxies = get_random_proxy()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
-    if any(v is None for v in data.values()):
-        raise ValueError(f"Failed to extract one or more values from BIS page for {house_no} {street}, Boro {boro}")
-    return data
+    
+    try:
+        response = requests.get(
+            url, 
+            params=params, 
+            headers=headers,
+            proxies=proxies,
+            timeout=30  # Add timeout to prevent hanging
+        )
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        text = soup.get_text(separator="\n")
+        
+        def extract_count(label):
+            match = re.search(rf"{label}\s+(\d+)", text)
+            return int(match.group(1)) if match else None
+            
+        data = {
+            "Complaints": extract_count("Complaints"),
+            "Violations-DOB": extract_count("Violations-DOB"),
+            "Violations-OATH/ECB": extract_count("Violations-OATH/ECB"),
+        }
+        
+        if any(v is None for v in data.values()):
+            raise ValueError(f"Failed to extract one or more values from BIS page for {house_no} {street}, Boro {boro}")
+            
+        return data
+        
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Proxy request failed for {house_no} {street}: {str(e)}")
+        raise
+    except Exception as e:
+        logging.error(f"Unexpected error while fetching BIS data for {house_no} {street}: {str(e)}")
+        raise
 
 # === 311 Complaint Fetcher ===
 API_URL_311 = "https://data.cityofnewyork.us/resource/erm2-nwe9.json"
@@ -427,6 +483,22 @@ def run_check():
     logging.info("Building Monitor check completed.")
 
 if __name__ == "__main__":
+    import sys
+    
+    # Handle proxy toggle command
+    if len(sys.argv) > 1 and sys.argv[1] in ['--proxy', '-p']:
+        if len(sys.argv) > 2:
+            use_proxy = sys.argv[2].lower() == 'on'
+            save_proxy_config({"use_proxy": use_proxy})
+            print(f"Proxy usage turned {'on' if use_proxy else 'off'}")
+            sys.exit(0)
+        else:
+            config = load_proxy_config()
+            print(f"Proxy is currently {'on' if config.get('use_proxy', True) else 'off'}")
+            print("Usage: python building_monitor.py --proxy [on|off]")
+            sys.exit(0)
+    
+    # Normal monitoring loop
     while True:
         try:
             run_check()

@@ -1,3 +1,7 @@
+# Environment variables
+.env
+.env.*
+
 # Python
 __pycache__/
 *.py[cod]
@@ -36,8 +40,9 @@ ENV/
 
 # Logs and databases
 *.log
+*.sqlite
 *.db
-*.sqlite3
+src/dbs/
 
 # Config and data (these will be mounted as volumes)
 config/
