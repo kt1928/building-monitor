@@ -8,6 +8,7 @@ A Docker-based application that monitors building statuses and sends notificatio
 - Sends notifications via Discord
 - Web UI for configuration
 - Automatic updates through Docker
+- Automated builds and deployments via GitHub Actions
 
 ## Setup
 
