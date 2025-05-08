@@ -14,40 +14,30 @@ import random
 
 # === CONFIG ===
 SCRIPT_DIR = Path(__file__).resolve().parent
-CONFIG_DIR = SCRIPT_DIR / "config"
-DB_DIR = SCRIPT_DIR / "dbs"
+CONFIG_DIR = SCRIPT_DIR.parent / "config"
+DB_DIR = SCRIPT_DIR.parent / "dbs"
 ADDRESS_FILE = CONFIG_DIR / "addresses.txt"
 WEBHOOK_FILE = CONFIG_DIR / "webhook.txt"
-PROXY_CONFIG_FILE = CONFIG_DIR / "proxy_config.json"
+PROXY_FILE = CONFIG_DIR / "proxy.txt"
 DB_PATH = DB_DIR / "building_monitor.db"
 LOG_FILE = DB_DIR / "building_monitor.log"
 
 # Proxy configuration
 def load_proxy_config():
     """Load proxy configuration from file."""
-    if PROXY_CONFIG_FILE.exists():
-        with PROXY_CONFIG_FILE.open('r') as f:
-            return json.load(f)
-    return {"use_proxy": True}  # Default to using proxy
-
-def save_proxy_config(config):
-    """Save proxy configuration to file."""
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with PROXY_CONFIG_FILE.open('w') as f:
-        json.dump(config, f)
+    if PROXY_FILE.exists():
+        with PROXY_FILE.open('r') as f:
+            proxy_url = f.read().strip()
+            if proxy_url:
+                return {
+                    "http": proxy_url,
+                    "https": proxy_url
+                }
+    return {}  # Return empty dict if no proxy
 
 def get_random_proxy():
     """Get a random proxy based on configuration."""
-    config = load_proxy_config()
-    if not config.get("use_proxy", True):
-        logging.info("Proxy usage is disabled")
-        return {}
-    
-    proxy = "http://customer-kappy_nrNdL-cc-US:3tGCOHQaFsfv1pzlrDAm+@pr.oxylabs.io:7777"
-    return {
-        "http": proxy,
-        "https": proxy
-    }
+    return load_proxy_config()
 
 # Schedule times (24-hour format)
 SCHEDULE_TIMES = [8, 12, 20]  # 8am, 12pm, 8pm
