@@ -29,6 +29,7 @@ jobs:
         with:
           username: kappy1928
           password: ${{ secrets.DOCKER_PASSWORD }}
+          logout: false
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -41,4 +42,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            BUILDKIT_INLINE_CACHE=1 
+            BUILDKIT_INLINE_CACHE=1
+          no-cache-filters: |
+            src/
+            config/
+            utils/ 

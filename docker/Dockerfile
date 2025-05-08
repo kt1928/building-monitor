@@ -9,20 +9,15 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create necessary directories
-RUN mkdir -p src config dbs utils
+# Create necessary directories and files
+RUN mkdir -p src config dbs utils && \
+    echo '{"use_proxy": true}' > config/proxy_config.json
 
 # Copy the application files
 COPY src/ ./src/
-# Copy config and utils if they exist, otherwise create empty directories
-COPY config/ ./config/ 2>/dev/null || true
-COPY utils/ ./utils/ 2>/dev/null || true
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-
-# Create default proxy config if it doesn't exist
-RUN echo '{"use_proxy": true}' > config/proxy_config.json
 
 # Expose port for Streamlit
 EXPOSE 8501
