@@ -1,0 +1,12 @@
+services:
+  building-monitor:
+    image: kappy1928/building-monitor:latest
+    container_name: building-monitor
+    volumes:
+      - /mnt/user/appdata/building-monitor/config:/app/config
+      - /mnt/user/appdata/building-monitor/dbs:/app/dbs
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    environment:
+      - TZ=America/New_York 

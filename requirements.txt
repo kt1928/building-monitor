@@ -1,0 +1,9 @@
+requests>=2.31.0
+gspread
+oauth2client
+pandas
+geopy 
+uszipcode
+beautifulsoup4>=4.12.0
+pytz>=2024.1
+streamlit>=1.32.0
