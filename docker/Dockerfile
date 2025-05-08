@@ -14,8 +14,9 @@ RUN mkdir -p src config dbs utils
 
 # Copy the application files
 COPY src/ ./src/
-COPY config/ ./config/ || true
-COPY utils/ ./utils/ || true
+# Copy config and utils if they exist, otherwise create empty directories
+COPY config/ ./config/ 2>/dev/null || true
+COPY utils/ ./utils/ 2>/dev/null || true
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
