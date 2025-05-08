@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   building-monitor:
     image: kappy1928/building-monitor:latest
@@ -5,8 +7,21 @@ services:
     volumes:
       - /mnt/user/appdata/building-monitor/config:/app/config
       - /mnt/user/appdata/building-monitor/dbs:/app/dbs
+      - /mnt/user/appdata/building-monitor/logs:/app/logs
     ports:
       - "8501:8501"
     restart: unless-stopped
     environment:
-      - TZ=America/New_York 
+      - TZ=America/New_York
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3" 

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<Container>
+  <Name>building-monitor</Name>
+  <Repository>kappy1928/building-monitor:latest</Repository>
+  <Registry>https://registry.hub.docker.com/</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/kt1928/building-monitor</Support>
+  <Project>https://github.com/kt1928/building-monitor</Project>
+  <Overview>Building Monitor - Monitors building statuses and sends notifications via Discord</Overview>
+  <Category>Monitoring:Other</Category>
+  <WebUI>http://[IP]:[PORT:8501]</WebUI>
+  <TemplateURL>https://github.com/kt1928/building-monitor</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/kt1928/building-icon/main/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled>1710864000</DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Docker</Requires>
+  <Config Name="Config Directory" Target="/app/config" Default="/mnt/user/appdata/building-monitor/config" Mode="rw" Description="Configuration Directory" Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Database Directory" Target="/app/dbs" Default="/mnt/user/appdata/building-monitor/dbs" Mode="rw" Description="Database Directory" Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Logs Directory" Target="/app/logs" Default="/mnt/user/appdata/building-monitor/logs" Mode="rw" Description="Logs Directory" Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="WebUI Port" Target="8501" Default="8501" Mode="tcp" Description="WebUI Port" Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Container Timezone" Type="Variable" Display="always" Required="false" Mask="false"/>
+</Container> 
