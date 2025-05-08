@@ -2,12 +2,14 @@ version: '3.8'
 
 services:
   building-monitor:
-    image: kappy1928/building-monitor:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: building-monitor
     volumes:
-      - /mnt/user/appdata/building-monitor/config:/app/config
-      - /mnt/user/appdata/building-monitor/dbs:/app/dbs
-      - /mnt/user/appdata/building-monitor/logs:/app/logs
+      - ./config:/app/config
+      - ./dbs:/app/dbs
+      - ./logs:/app/logs
     ports:
       - "8501:8501"
     restart: unless-stopped

@@ -18,8 +18,17 @@ A Docker-based application that monitors building statuses and sends notificatio
    - `DOCKER_PASSWORD`: Your Docker Hub password
 3. The application is organized in the following directory structure:
    - `src/`: Source code for the application
+     - `building_monitor.py`: Main application logic
+     - `ui.py`: Web interface implementation
+     - `requirements.txt`: Python dependencies
    - `config/`: Configuration files
+     - `my-building-monitor.xml`: Application configuration
    - `docker/`: Docker-related files
+     - `Dockerfile`: Container definition
+     - `docker-compose.yml`: Container orchestration
+     - `.dockerignore`: Docker build exclusions
+   - `workflows/`: GitHub Actions workflows
+   - `utils/`: Utility modules and helpers
 
 ## Development
 

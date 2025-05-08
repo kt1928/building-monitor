@@ -4,13 +4,15 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+COPY src/requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
+# Copy the application files
+COPY src/ ./src/
+COPY config/ ./config/
+COPY utils/ ./utils/
 
 # Create necessary directories
 RUN mkdir -p config dbs
@@ -22,4 +24,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8501
 
 # Run both the monitor and UI
-CMD ["sh", "-c", "python building_monitor.py & streamlit run ui.py --server.port=8501 --server.address=0.0.0.0"] 
+CMD ["sh", "-c", "python src/building_monitor.py & streamlit run src/ui.py --server.port=8501 --server.address=0.0.0.0"] 
