@@ -16,6 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create necessary directories
+        run: |
+          mkdir -p config dbs
+          echo '{"use_proxy": true}' > config/proxy_config.json
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
