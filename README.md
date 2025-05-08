@@ -16,6 +16,10 @@ A Docker-based application that monitors building statuses and sends notificatio
 2. Set up GitHub repository secrets:
    - `DOCKER_USERNAME`: Your Docker Hub username
    - `DOCKER_PASSWORD`: Your Docker Hub password
+3. The application is organized in the following directory structure:
+   - `src/`: Source code for the application
+   - `config/`: Configuration files
+   - `docker/`: Docker-related files
 
 ## Development
 
