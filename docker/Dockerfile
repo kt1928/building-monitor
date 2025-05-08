@@ -9,15 +9,22 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create necessary directories and files
-RUN mkdir -p src config dbs utils && \
-    echo '{"use_proxy": true}' > config/proxy_config.json
+# Create necessary directories
+RUN mkdir -p src config dbs utils
 
 # Copy the application files
 COPY src/ ./src/
+COPY config/ ./config/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Create default proxy config
+RUN echo "http://customer-kappy_nrNdL-cc-US:3tGCOHQaFsfv1pzlrDAm+@pr.oxylabs.io:7777" > config/proxy.txt
+
+# Create volume for persistent data
+VOLUME ["/app/config", "/app/dbs"]
 
 # Expose port for Streamlit
 EXPOSE 8501
