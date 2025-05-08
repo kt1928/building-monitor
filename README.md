@@ -4,7 +4,7 @@ A Docker-based application that monitors building statuses and sends notificatio
 
 ## Features
 
-- Monitors building statuses at scheduled intervals
+- Monitors building statuses from BIS and 311 at scheduled intervals
 - Sends notifications via Discord
 - Web UI for configuration
 - Automatic updates through Docker
