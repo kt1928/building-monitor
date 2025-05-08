@@ -4,7 +4,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy requirements first to leverage Docker cache
-COPY src/requirements.txt .
+COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -19,6 +19,9 @@ RUN mkdir -p config dbs
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
+# Create default proxy config
+RUN echo '{"use_proxy": true}' > config/proxy_config.json
 
 # Expose port for Streamlit
 EXPOSE 8501
