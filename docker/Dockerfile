@@ -30,7 +30,7 @@ ENV PYTHONPATH=/app
 VOLUME ["/app/config", "/app/dbs"]
 
 # Expose port for Streamlit
-EXPOSE 8504
+EXPOSE 8501
 
 # Run the UI only
-CMD ["streamlit", "run", "src/ui.py", "--server.port=8504", "--server.address=0.0.0.0"] 
+CMD ["streamlit", "run", "src/ui.py", "--server.port=8501", "--server.address=0.0.0.0"] 
