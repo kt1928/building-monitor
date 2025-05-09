@@ -1,6 +1,9 @@
-# Environment variables
-.env
-.env.*
+# Config files
+config/
+src/config/
+
+# Database files
+dbs/
 
 # Python
 __pycache__/
@@ -20,7 +23,6 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -35,18 +37,22 @@ ENV/
 *.swp
 *.swo
 
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
 # Docker
 .dockerignore
 
 # Logs and databases
-*.log
 *.sqlite
 *.db
-src/dbs/
-
-# Config and data (these will be mounted as volumes)
-config/
-dbs/
-
-# macOS
-.DS_Store 
+src/dbs/ 
