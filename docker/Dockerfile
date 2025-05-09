@@ -14,8 +14,13 @@ RUN mkdir -p src config dbs utils
 
 # Copy the application files
 COPY src/ ./src/
-COPY config/ ./config/
-COPY src/config/addresses.txt ./config/addresses.txt
+
+# Create empty config directory structure
+RUN mkdir -p config && \
+    touch config/addresses.txt && \
+    touch config/webhook.txt && \
+    touch config/schedule.json && \
+    touch config/proxy.txt
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
