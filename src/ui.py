@@ -715,9 +715,12 @@ def show_owner_management():
                         owner['id'],
                         new_discord if new_discord else None,
                         new_email if new_email else None,
-                        new_phone if new_phone else None,
-                        json.dumps(new_schedule)
+                        new_phone if new_phone else None
                     )
+                    # Update schedule separately
+                    c = conn.cursor()
+                    c.execute("UPDATE owners SET schedule = ? WHERE id = ?", (json.dumps(new_schedule), owner['id']))
+                    conn.commit()
                     st.success("Preferences updated!")
             
             with col2:
