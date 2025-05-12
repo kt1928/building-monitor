@@ -12,6 +12,7 @@ import json
 import pytz
 import random
 import argparse
+import threading
 
 # === CONFIG ===
 SCRIPT_DIR = Path(__file__).parent
@@ -22,6 +23,59 @@ ADDRESS_FILE = CONFIG_DIR / "addresses.txt"
 PROXY_FILE = CONFIG_DIR / "proxy.txt"
 WEBHOOK_FILE = CONFIG_DIR / "webhook.txt"
 LOG_FILE = DB_DIR / "building_monitor.log"
+
+# Thread-local storage for current address
+thread_local = threading.local()
+
+class AddressLogFormatter(logging.Formatter):
+    """Custom formatter that includes the current address in log messages."""
+    
+    def format(self, record):
+        # Get the current address from thread-local storage
+        current_address = getattr(thread_local, 'current_address', 'GLOBAL')
+        
+        # Add address to the log message if it's not already there
+        if not hasattr(record, 'address'):
+            record.address = current_address
+            
+        # Format the message with address
+        if record.address != 'GLOBAL':
+            record.msg = f"[{record.address}] {record.msg}"
+        
+        return super().format(record)
+
+def set_current_address(address):
+    """Set the current address in thread-local storage."""
+    thread_local.current_address = address
+
+def clear_current_address():
+    """Clear the current address from thread-local storage."""
+    thread_local.current_address = 'GLOBAL'
+
+# === LOGGING ===
+def setup_logging():
+    """Setup logging with custom formatter."""
+    formatter = AddressLogFormatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # File handler
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setFormatter(formatter)
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Setup root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+# Initialize logging
+setup_logging()
 
 # Proxy configuration
 def load_proxy_config():
@@ -54,16 +108,6 @@ BIS_BORO_CODES = {
 # Ensure directories exist
 DB_DIR.mkdir(exist_ok=True)
 CONFIG_DIR.mkdir(exist_ok=True)
-
-# === LOGGING ===
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
 
 def get_next_run_time():
     """Calculate the next run time based on the schedule."""
@@ -210,7 +254,16 @@ def get_311_complaints(address, borough, zip_code, limit=20):
 # === Alert Sender ===
 def send_discord_embed(webhook_url, embed):
     data = {"embeds": [embed]}
-    requests.post(webhook_url, json=data)
+    try:
+        logging.info(f"Sending Discord webhook to {webhook_url[:30]}...")
+        response = requests.post(webhook_url, json=data)
+        response.raise_for_status()
+        logging.info("Discord webhook sent successfully")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to send Discord webhook: {str(e)}")
+        if hasattr(e.response, 'text'):
+            logging.error(f"Discord API response: {e.response.text}")
+        raise
 
 # === SQLite DB ===
 def init_db():
@@ -638,20 +691,23 @@ def run_check(owner_id=None):
 
         # First pass
         for address in addresses:
-            logging.info(f"Processing address: {address}")
+            # Set current address for logging
+            set_current_address(address.split('|')[0])
+            
+            logging.info("Processing address")
             # Get owner(s) for this address
             c = conn.cursor()
-            c.execute("SELECT owner_id FROM address_owners WHERE address = ?", (address,))
+            c.execute("SELECT owner_id FROM address_owners WHERE address = ?", (address.split('|')[0],))
             address_owners = [row[0] for row in c.fetchall()]
             if address_owners:
-                logging.info(f"Address {address} is assigned to {len(address_owners)} owners")
+                logging.info(f"Address is assigned to {len(address_owners)} owners")
             
             # --- BIS Check ---
             house_no, street, boro_code = parse_address_for_bis(address)
             bis_success = False
             bis_stats = None
             if not all([house_no, street, boro_code]):
-                logging.error(f"Skipping BIS check for {address} due to parse error.")
+                logging.error("Skipping BIS check due to parse error.")
             else:
                 for attempt in range(2):
                     try:
@@ -659,15 +715,15 @@ def run_check(owner_id=None):
                         bis_success = True
                         break
                     except Exception as e:
-                        logging.error(f"Failed BIS check for {address} (attempt {attempt+1}): {e}")
+                        logging.error(f"Failed BIS check (attempt {attempt+1}): {e}")
                         logging.error(traceback.format_exc())
                         time.sleep(2)
                 if not bis_success:
                     bis_retry_list.append(address)
-                    logging.warning(f"Added {address} to retry list")
+                    logging.warning("Added to retry list")
                 else:
-                    if address in old_bis_data:
-                        old_dob, old_ecb = old_bis_data[address]
+                    if address.split('|')[0] in old_bis_data:
+                        old_dob, old_ecb = old_bis_data[address.split('|')[0]]
                         changes = {}
                         if bis_stats["Violations-DOB"] != old_dob:
                             changes["Violations-DOB"] = (old_dob, bis_stats["Violations-DOB"])
@@ -675,31 +731,31 @@ def run_check(owner_id=None):
                             changes["Violations-OATH/ECB"] = (old_ecb, bis_stats["Violations-OATH/ECB"])
                         
                         if changes:
-                            logging.info(f"Found changes for {address}: {changes}")
+                            logging.info(f"Found changes: {changes}")
                             for owner_id in address_owners:
                                 if owner_id not in changed_addresses:
                                     changed_addresses[owner_id] = []
                                     bis_change_details[owner_id] = []
-                                changed_addresses[owner_id].append(address)
+                                changed_addresses[owner_id].append(address.split('|')[0])
                                 bis_change_details[owner_id].append({
-                                    "address": address,
+                                    "address": address.split('|')[0],
                                     "changes": changes,
                                     "new_totals": bis_stats
                                 })
-                    update_bis_status(conn, address, bis_stats)
-                    logging.info(f"Updated BIS status for {address}")
+                    update_bis_status(conn, address.split('|')[0], bis_stats)
+                    logging.info("Updated BIS status")
 
             # --- 311 Check ---
             addr_311, borough_311, zip_311 = parse_address_for_311(address)
             if not all([addr_311, borough_311, zip_311]):
-                logging.error(f"Skipping 311 check for {address} due to parse error.")
+                logging.error("Skipping 311 check due to parse error.")
             else:
                 try:
-                    logging.info(f"Starting 311 check for {address}")
+                    logging.info("Starting 311 check")
                     complaints = get_311_complaints(addr_311, borough_311, zip_311, limit=20)
                     new_complaints = [c for c in complaints if c.get("incident_id") not in old_311_ids]
                     if new_complaints:
-                        logging.info(f"Found {len(new_complaints)} new 311 complaints for {address}")
+                        logging.info(f"Found {len(new_complaints)} new 311 complaints")
                         for c in new_complaints:
                             logging.info(f"Inserting new 311 complaint: {c.get('incident_id')} - {c.get('complaint_type')}")
                             insert_311_complaint(conn, c)
@@ -707,20 +763,23 @@ def run_check(owner_id=None):
                             if owner_id not in new_311_alerts:
                                 new_311_alerts[owner_id] = []
                                 new_311_details[owner_id] = []
-                            new_311_alerts[owner_id].append(address)
+                            new_311_alerts[owner_id].append(address.split('|')[0])
                             last_complaint = max(new_complaints, key=lambda c: c.get("created_date", ""))
                             new_311_details[owner_id].append({
-                                "address": address,
+                                "address": address.split('|')[0],
                                 "last_date": last_complaint.get("created_date", "N/A"),
                                 "details": new_complaints
                             })
-                            logging.info(f"Added 311 alerts for owner {owner_id} - {address}")
+                            logging.info(f"Added 311 alerts for owner {owner_id}")
                     else:
-                        logging.info(f"No new 311 complaints found for {address}")
+                        logging.info("No new 311 complaints found")
                 except Exception as e:
-                    logging.error(f"Failed 311 check for {address}: {e}")
+                    logging.error(f"Failed 311 check: {e}")
                     logging.error(traceback.format_exc())
-                    failed_addresses.append(address)
+                    failed_addresses.append(address.split('|')[0])
+            
+            # Clear current address after processing
+            clear_current_address()
 
         # Send notifications to each owner
         for owner in owners:
@@ -743,7 +802,7 @@ def run_check(owner_id=None):
             embed_title = f"Building Monitor Stats - {date_str} - {time_str}"
             
             # Get the addresses that were actually checked for this owner
-            checked_addresses = [addr for addr in addresses if addr in owner_addresses[owner_id]]
+            checked_addresses = [addr.split('|')[0] for addr in addresses if addr.split('|')[0] in owner_addresses[owner_id]]
             
             embed = {
                 "title": embed_title,
