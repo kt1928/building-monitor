@@ -56,3 +56,5 @@ Thumbs.db
 *.sqlite
 *.db
 src/dbs/ 
+# Utils with potential secrets (not part of building-monitor)
+utils/
